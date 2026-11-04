@@ -1,0 +1,10 @@
+name: probe
+on:
+  push:
+    branches: [ccr-7e7a6f84-4t43ho]
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/probe.py
