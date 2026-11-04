@@ -86,6 +86,12 @@ td .tag{font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-
 .read b{color:var(--ink)}
 .foot{font-size:12px;color:var(--muted);margin-top:16px}
 .msg{font-size:12px;color:var(--accent)}
+.mkt{margin-bottom:16px}
+.mkt .gh .lvl{white-space:normal;text-align:left}
+.mkt .chart{position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.12);border-radius:6px;padding:7px 9px;font-size:12px;min-width:150px;z-index:5}
+.tip .r{display:flex;justify-content:space-between;gap:12px;font-family:var(--f-num)}
+.story{font-size:12.5px;color:var(--ink2);margin-top:8px;padding:8px 10px;border-left:3px solid var(--accent);background:var(--sunk);border-radius:0 6px 6px 0}
 .mt{margin-top:16px}
 @media (max-width:900px){
   .grid{grid-template-columns:1fr}
@@ -103,6 +109,13 @@ td .tag{font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-
     <div class="meta" id="meta"></div>
   </header>
 
+  <section class="mkt">
+    <div class="gh"><h2>국고채 3년·10년 최근 3개월</h2><span class="lvl" id="mktHead"></span></div>
+    <div class="legend"><span><i style="background:var(--ink)"></i>10년</span><span><i style="background:var(--t3)"></i>3년</span><span><i style="background:var(--accent);height:0;border-top:2px dashed var(--accent)"></i>현재 내러티브의 적정금리</span></div>
+    <div class="chart" id="mkt"></div>
+    <div class="sub" id="mktSrc" style="margin:4px 0 0"></div>
+  </section>
+
   <div class="res" id="res" aria-live="polite"></div>
 
   <div class="grid">
@@ -111,6 +124,7 @@ td .tag{font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-
         <h2>시나리오</h2>
         <p class="sub">누르면 슬라이더가 그 값으로 바뀐다. 직접 조정한 상태는 이름을 붙여 저장해 아래 표에서 비교한다.</p>
         <div class="bar" id="presets"></div>
+        <div class="story" id="story" hidden></div>
         <div class="bar" style="margin-top:10px">
           <input type="text" id="sname" placeholder="시나리오 이름 (예: 고용 쇼크 심화)" maxlength="40">
           <button type="button" class="pri" id="save">현재 상태 저장</button>
@@ -156,9 +170,13 @@ td .tag{font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-
     </details>
   </section>
 
-  <p class="foot">10년 ≈ π̄(기대인플레) + r̄*(실질 중립금리) + TP(텀프리미엄) + @(경기·정책·수급). 슬라이더 합이 10년 변화폭, 요인별 ×k를 곱한 합이 3년 변화폭이다. 채권가격은 반기 이표로 정확히 계산하며 금리가 적정 수준으로 즉시 이동한다고 가정한다. 캐리는 1년 이자 − 기준금리 조달비용이며 롤다운은 뺐다. 슬라이더 상태와 저장 시나리오는 이 브라우저에만 남는다. 분석 도구이며 투자 권유가 아니다.</p>
+  <p class="foot">10년 ≈ π̄(기대인플레) + r̄*(실질 중립금리) + TP(텀프리미엄) + @(경기·정책·수급). 슬라이더 합이 10년 변화폭, 요인별 ×k를 곱한 합이 3년 변화폭이다. 채권가격은 반기 이표로 정확히 계산하며 금리가 적정 수준으로 즉시 이동한다고 가정한다. 캐리는 1년 이자 − 기준금리 조달비용이며 롤다운은 뺐다. 현재 3년·10년 금리는 매 영업일 장 마감 후 자동 갱신된다. 슬라이더 상태와 저장 시나리오는 이 브라우저에만 남는다. 분석 도구이며 투자 권유가 아니다.</p>
 </div>
 
+<!-- 매일 자동 갱신(scripts/update_yields.py). 직접 고치지 않는다. -->
+<script type="application/json" id="market">{"rows":[]}</script>
+
+<!-- 틀: 요인·민감도·내러티브(시나리오). 새 내러티브는 presets에 추가한다. -->
 <script type="application/json" id="data">
 {
   "asof": "2026-11-04",
@@ -192,12 +210,12 @@ td .tag{font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-
     ]}
   ],
   "presets": [
-    { "name": "현 전제 유지", "f": {} },
-    { "name": "AI 고용충격·소비 침체", "f": { "labor": -25, "bok": -15, "ai": -10, "disinf": -10, "semi": -5, "frgn": -5, "fisc": 5, "supply": 10 } },
-    { "name": "반도체 다운사이클", "f": { "semi": -30, "ai": -5, "debt": -5, "disinf": -10, "frgn": -5, "labor": -10, "bok": -15, "pos": -5 } },
-    { "name": "침체 + 대규모 추경", "f": { "labor": -25, "bok": -15, "disinf": -5, "fisc": 15, "supply": 30, "vol": 5 } },
-    { "name": "전쟁·확장재정 인플레", "f": { "war": 25, "fisc": 15, "fx": 10, "supply": 20, "vol": 10, "bok": 10 } },
-    { "name": "AI 생산성 확인", "f": { "ai": 20, "fisc": 5, "supply": 15, "frgn": 5, "labor": 5, "bok": 5 } }
+    { "name": "현 전제 유지", "story": "성장 서사와 수급이 지금 가격 그대로 유지된다.", "f": {} },
+    { "name": "AI 고용충격·소비 침체", "story": "메타 외 빅테크는 AI 수익성을 증명하지 못하고 생산성 효과는 지연된다. 그 사이 대기업 감원·채용 축소(계약직 전환)로 고용과 소비가 꺾이고 한은은 인하로 돌아선다. 추경은 소폭.", "f": { "labor": -25, "bok": -15, "ai": -10, "disinf": -10, "semi": -5, "frgn": -5, "fisc": 5, "supply": 10 } },
+    { "name": "반도체 다운사이클", "story": "메모리 가격 반락으로 반도체 특수가 끝나고 수출·설비투자가 줄어 성장 기대가 낮아진다.", "f": { "semi": -30, "ai": -5, "debt": -5, "disinf": -10, "frgn": -5, "labor": -10, "bok": -15, "pos": -5 } },
+    { "name": "침체 + 대규모 추경", "story": "경기는 침체로 가지만 정부가 대규모 추경으로 대응해 국고채 공급이 크게 늘어난다.", "f": { "labor": -25, "bok": -15, "disinf": -5, "fisc": 15, "supply": 30, "vol": 5 } },
+    { "name": "전쟁·확장재정 인플레", "story": "분쟁 확산으로 유가·환율이 오르고 확장재정이 겹쳐 기대인플레이션과 발행 부담이 커진다.", "f": { "war": 25, "fisc": 15, "fx": 10, "supply": 20, "vol": 10, "bok": 10 } },
+    { "name": "AI 생산성 확인", "story": "AI 생산성 개선이 지표로 확인되어 잠재성장과 중립금리 기대가 올라간다.", "f": { "ai": 20, "fisc": 5, "supply": 15, "frgn": 5, "labor": 5, "bok": 5 } }
   ]
 }
 </script>
@@ -205,13 +223,17 @@ td .tag{font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-
 <script>
 (function(){
 const C=JSON.parse(document.getElementById('data').textContent);
+let MK={rows:[]};try{MK=JSON.parse(document.getElementById('market').textContent)||MK;}catch(e){}
+const MR=(MK.rows||[]).filter(r=>r&&isFinite(r[1])&&isFinite(r[2]));
+const LAST=MR.length?MR[MR.length-1]:null;
+if(LAST){C.base.y3=LAST[1];C.base.y10=LAST[2];C.asof=LAST[0];}
 const KEY='ktb10y-factors-v2';
 const FAC=C.groups.flatMap(g=>g.factors.map(f=>({...f,g:g.id})));
 const zeroF=()=>Object.fromEntries(FAC.map(f=>[f.id,0]));
 const clone=o=>JSON.parse(JSON.stringify(o));
 let S={base:clone(C.base),f:zeroF(),saved:[]};
-try{const r=JSON.parse(localStorage.getItem(KEY)||'null');if(r&&r.f){S.base={...S.base,...r.base};S.f={...S.f,...r.f};S.saved=Array.isArray(r.saved)?r.saved:[];}}catch(e){}
-const store=()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}};
+try{const r=JSON.parse(localStorage.getItem(KEY)||'null');if(r&&r.f){const rb={...r.base};delete rb.y10;delete rb.y3;S.base={...S.base,...rb};S.f={...S.f,...r.f};S.saved=Array.isArray(r.saved)?r.saved:[];}}catch(e){}
+const store=()=>{try{const o=clone(S);delete o.base.y10;delete o.base.y3;localStorage.setItem(KEY,JSON.stringify(o));}catch(e){}};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pct=x=>isFinite(x)?x.toFixed(2)+'%':'–';
@@ -260,7 +282,7 @@ function buildGroups(){
   $('groups').querySelectorAll('input[type=number]').forEach(el=>el.addEventListener('input',()=>{const v=parseFloat(el.value);if(!isFinite(v))return;
     const x=FAC.find(q=>q.id===el.dataset.n);S.f[x.id]=Math.max(x.min,Math.min(x.max,Math.round(v)));clearPreset();update(el);}));
 }
-const BASE=[['y10','현재 10년 %',0.01],['y3','현재 3년 %',0.01],['rate','기준금리(조달) %',0.25],['pi','기준 π̄ %',0.05],['rs','기준 r̄* %',0.05],['tp','기준 TP %',0.05],['g','반영 잠재성장 g %',0.1],['beta','β (g→r̄*)',0.05],['c10','10년 표면금리 %',0.125],['c3','3년 표면금리 %',0.125],['amt','10년 보유액 억원',10]];
+const BASE=[['y10','현재 10년 % (자동)',0.01],['y3','현재 3년 % (자동)',0.01],['rate','기준금리(조달) %',0.25],['pi','기준 π̄ %',0.05],['rs','기준 r̄* %',0.05],['tp','기준 TP %',0.05],['g','반영 잠재성장 g %',0.1],['beta','β (g→r̄*)',0.05],['c10','10년 표면금리 %',0.125],['c3','3년 표면금리 %',0.125],['amt','10년 보유액 억원',10]];
 function buildBase(){
   $('baseIns').innerHTML=BASE.map(([k,l,s])=>`<label>${l}<input type="number" step="${s}" data-b="${k}"></label>`).join('');
   document.querySelectorAll('input[data-b]').forEach(el=>{el.value=S.base[el.dataset.b];
@@ -270,6 +292,7 @@ let active=null;
 function buildPresets(){
   $('presets').innerHTML=C.presets.map((p,i)=>`<button type="button" data-p="${i}"${active===i?' class="on"':''}>${esc(p.name)}</button>`).join('');
   $('presets').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{active=+b.dataset.p;applyF(C.presets[active].f);buildPresets();}));
+  const st=active!==null&&C.presets[active].story;$('story').hidden=!st;if(st)$('story').innerHTML=`<b>${esc(C.presets[active].name)}</b> — ${esc(st)}`;
 }
 function clearPreset(){if(active!==null){active=null;buildPresets();}}
 function applyF(f){S.f={...zeroF(),...f};update();}
@@ -292,7 +315,7 @@ function update(src){
     r.style.setProperty('--z',z+'%');r.style.setProperty('--v',p+'%');r.style.setProperty('--c',col(v));});
   document.querySelectorAll('input[data-b]').forEach(el=>{if(el!==src)el.value=S.base[el.dataset.b];});
   $('baseOut').textContent=`@(잔차) = 현재 10년 − π̄ − r̄* − TP = ${R.at0.toFixed(2)}%. 3년물은 현재 기준금리보다 ${Math.round((b.y3-b.rate)*100)}bp 높다 (그만큼 인상 또는 인하 지연이 가격에 들어 있음).`;
-  strat(R,shp);drawCurve(R);drawContrib(R);table();store();
+  strat(R,shp);drawMkt(R);drawCurve(R);drawContrib(R);table();store();
 }
 
 function strat(R,shp){
@@ -319,6 +342,49 @@ function strat(R,shp){
     if(risk.length)t+=`10년 롱의 역풍: ${risk.map(x=>`${esc(x.n)}(${bp(x.v)})`).join(', ')}.`;
   }
   $('read').innerHTML=t;
+}
+function drawMkt(R){
+  const box=$('mkt'),b=S.base;
+  if(!MR.length){box.innerHTML='<p class="sub" style="padding:24px 0;text-align:center">시장금리 데이터가 아직 없다. 매일 장 마감 후 자동으로 채워진다.</p>';$('mktHead').textContent='';$('mktSrc').textContent='';return;}
+  const end=new Date(LAST[0]),st=new Date(end);st.setMonth(st.getMonth()-3);const s0=st.toISOString().slice(0,10);
+  const rows=MR.filter(r=>r[0]>=s0),first=rows[0];
+  const ch=(i)=>bp((LAST[i]-first[i])*100);
+  $('mktHead').innerHTML=`10년 <b>${LAST[2].toFixed(3)}%</b> <span class="${cls((LAST[2]-first[2])*100)}">${ch(2)}</span> · <span style="color:var(--t3)">3년 <b>${LAST[1].toFixed(3)}%</b></span> <span class="${cls((LAST[1]-first[1])*100)}">${ch(1)}</span> · 스프레드 <b>${Math.round((LAST[2]-LAST[1])*100)}bp</b> <span style="color:var(--muted)">(3개월 전 대비)</span>`;
+  $('mktSrc').textContent=`${LAST[0]} 종가 기준 · 출처 ${MK.source||'–'} · 갱신 ${MK.updated||'–'} · 매 영업일 장 마감 후 자동 갱신`;
+  const W=Math.max(320,box.clientWidth||800),narrow=W<600,ml=44,mr=narrow?64:92,mt=10,h1=narrow?170:210,gap=22,h2=narrow?56:70,mb=22,H=mt+h1+gap+h2+mb,pw=W-ml-mr,n=rows.length;
+  const fx=ml+pw+(narrow?22:34);/* 적정 표시 위치 */
+  const ys=rows.flatMap(r=>[r[1],r[2]]).concat([R.f3,R.f10]),lo=Math.floor((Math.min(...ys)-0.05)*10)/10,hi=Math.ceil((Math.max(...ys)+0.05)*10)/10;
+  const sp=rows.map(r=>(r[2]-r[1])*100).concat([(R.f10-R.f3)*100]),slo=Math.floor(Math.min(0,...sp)/10)*10,shi=Math.ceil(Math.max(...sp)/10)*10||10;
+  const X=i=>ml+(n>1?i/(n-1):0.5)*pw,Y=v=>mt+(hi-v)/(hi-lo)*h1,y2=mt+h1+gap,YS=v=>y2+(shi-v)/(shi-slo||1)*h2;
+  const stp=(hi-lo)>1.2?0.5:(hi-lo)>0.6?0.25:0.1;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="국고채 3년·10년 최근 3개월 금리와 스프레드">`;
+  for(let v=Math.ceil(lo/stp)*stp;v<=hi+1e-9;v+=stp)s+=`<line x1="${ml}" x2="${ml+pw}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${ml-6}" y="${Y(v)+4}" text-anchor="end">${v.toFixed(2)}</text>`;
+  [slo,shi].forEach(v=>s+=`<line x1="${ml}" x2="${ml+pw}" y1="${YS(v)}" y2="${YS(v)}" stroke="var(--line)"/><text x="${ml-6}" y="${YS(v)+4}" text-anchor="end">${v}</text>`);
+  if(slo<0&&shi>0)s+=`<line x1="${ml}" x2="${ml+pw}" y1="${YS(0)}" y2="${YS(0)}" stroke="var(--axis)"/>`;
+  s+=`<text x="${ml}" y="${y2-6}" class="lab" style="font-size:11px">10년−3년 스프레드 (bp)</text>`;
+  /* x축: 월 경계 */
+  let pm='';rows.forEach((r,i)=>{const m=r[0].slice(0,7);if(m!==pm){if(pm)s+=`<line x1="${X(i)}" x2="${X(i)}" y1="${mt}" y2="${YS(slo)}" stroke="var(--line)" stroke-dasharray="2 3"/><text x="${X(i)}" y="${H-6}" text-anchor="middle">${+r[0].slice(5,7)}월</text>`;pm=m;}});
+  const line=(fn,c,w)=>`<polyline fill="none" stroke="${c}" stroke-width="${w}" stroke-linejoin="round" points="${rows.map((r,i)=>X(i).toFixed(1)+','+fn(r).toFixed(1)).join(' ')}"/>`;
+  s+=line(r=>Y(r[2]),'var(--ink)',2)+line(r=>Y(r[1]),'var(--t3)',2);
+  s+=`<polygon fill="var(--accent-soft)" points="${X(0)},${YS(Math.max(slo,0))} ${rows.map((r,i)=>X(i).toFixed(1)+','+YS((r[2]-r[1])*100).toFixed(1)).join(' ')} ${X(n-1)},${YS(Math.max(slo,0))}"/>`+line(r=>YS((r[2]-r[1])*100),'var(--accent)',1.5);
+  /* 적정 투영 */
+  const lx=X(n-1);
+  [[LAST[2],R.f10,'var(--ink)'],[LAST[1],R.f3,'var(--t3)']].forEach(([c,f,k])=>{
+    s+=`<line x1="${lx}" y1="${Y(c)}" x2="${fx}" y2="${Y(f)}" stroke="${k}" stroke-width="1.5" stroke-dasharray="4 3" opacity=".8"/><circle cx="${fx}" cy="${Y(f)}" r="5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>`;});
+  const lab=(y,t,k)=>`<text x="${fx+9}" y="${y+4}" class="val" style="fill:${k}">${t}</text>`;
+  let a=Y(R.f10),bb=Y(R.f3);if(Math.abs(a-bb)<14){const m=(a+bb)/2;a=m+(R.f10>=R.f3?-7:7);bb=m+(R.f10>=R.f3?7:-7);}
+  s+=lab(a,R.f10.toFixed(2),'var(--ink)')+lab(bb,R.f3.toFixed(2),'var(--t3)');
+  s+=`<line x1="${lx}" y1="${YS((LAST[2]-LAST[1])*100)}" x2="${fx}" y2="${YS((R.f10-R.f3)*100)}" stroke="var(--accent)" stroke-dasharray="4 3"/><circle cx="${fx}" cy="${YS((R.f10-R.f3)*100)}" r="4" fill="var(--accent)"/>`+lab(YS((R.f10-R.f3)*100),Math.round((R.f10-R.f3)*100)+'bp','var(--accent)');
+  s+=`<text x="${fx}" y="${H-6}" text-anchor="middle" style="fill:var(--accent)">적정</text>`;
+  s+=`<line id="mkx" x1="0" x2="0" y1="${mt}" y2="${YS(slo)}" stroke="var(--axis)" visibility="hidden"/><rect x="${ml}" y="${mt}" width="${pw}" height="${YS(slo)-mt}" fill="transparent" id="mkhit"/>`;
+  box.innerHTML=s+'</svg>';
+  const svg=box.querySelector('svg'),hit=$('mkhit'),vx=$('mkx');
+  hit.addEventListener('pointermove',e=>{const bb2=svg.getBoundingClientRect(),sx=(e.clientX-bb2.left)*W/bb2.width,i=Math.max(0,Math.min(n-1,Math.round((sx-ml)/pw*(n-1)))),r=rows[i];
+    vx.setAttribute('x1',X(i));vx.setAttribute('x2',X(i));vx.setAttribute('visibility','visible');
+    let t=box.querySelector('.tip');if(!t){t=document.createElement('div');t.className='tip';box.appendChild(t);}t.hidden=false;
+    t.innerHTML=`<b>${r[0]}</b><div class="r"><span>10년</span><span>${r[2].toFixed(3)}%</span></div><div class="r"><span style="color:var(--t3)">3년</span><span>${r[1].toFixed(3)}%</span></div><div class="r"><span>스프레드</span><span>${Math.round((r[2]-r[1])*100)}bp</span></div>`;
+    let x=X(i)*bb2.width/W+14;if(x+t.offsetWidth>box.clientWidth)x-=t.offsetWidth+28;t.style.left=Math.max(0,x)+'px';t.style.top='8px';});
+  hit.addEventListener('pointerleave',()=>{vx.setAttribute('visibility','hidden');const t=box.querySelector('.tip');if(t)t.hidden=true;});
 }
 function drawCurve(R){
   const b=S.base,W=Math.max(300,$('curve').clientWidth||400),H=170,ml=46,mr=70,mt=16,mb=26,pw=W-ml-mr,ph=H-mt-mb;
@@ -373,7 +439,7 @@ $('sname').addEventListener('keydown',e=>{if(e.key==='Enter')$('save').click();}
 $('reset').addEventListener('click',()=>{S.f=zeroF();S.base=clone(C.base);active=null;buildPresets();update();msg('슬라이더와 기준값을 초기화했다 (저장한 시나리오는 유지)');});
 
 buildGroups();buildBase();buildPresets();update();
-let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{const R=calc(S.f,S.base);drawCurve(R);drawContrib(R);},120);});
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{const R=calc(S.f,S.base);drawMkt(R);drawCurve(R);drawContrib(R);},120);});
 })();
 </script>
 </body>

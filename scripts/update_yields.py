@@ -1,8 +1,9 @@
 """국고채 3년·10년 일별 금리를 받아 index.html의 <script id="market"> 블록을 갱신한다.
 
-1순위: 네이버 증권 (KR3YT=RR, KR10YT=RR, 장 마감 후 당일 종가)
-2순위: 한국은행 ECOS 817Y002 시장금리(일별) — 환경변수 ECOS_API_KEY가 없으면 sample 키
-매번 최근 약 130일치를 같은 출처로 다시 받아 통째로 바꾼다(출처 혼합 방지).
+출처 두 곳을 모두 받아 최근 날짜가 더 늦은 쪽을 쓰고, 같으면 공식 통계인 ECOS를 쓴다.
+- 한국은행 ECOS 817Y002 시장금리(일별, 금융투자협회 최종호가수익률) — ECOS_API_KEY 환경변수가 없으면 sample 키
+- 네이버 증권 KR3YT=RR, KR10YT=RR (장 마감 후 당일 종가)
+매번 최근 약 130일치를 한 출처로 다시 받아 통째로 바꾼다(출처 혼합 방지).
 """
 import json, os, re, sys, urllib.request
 from datetime import datetime, timedelta, timezone
@@ -50,8 +51,8 @@ def ecos(item, since):
 
 
 SOURCES = [
-    ("네이버 증권", lambda s: (naver("KR3YT=RR", s), naver("KR10YT=RR", s))),
     ("한국은행 ECOS", lambda s: (ecos("010200000", s), ecos("010210000", s))),
+    ("네이버 증권", lambda s: (naver("KR3YT=RR", s), naver("KR10YT=RR", s))),
 ]
 
 
@@ -59,17 +60,20 @@ def main():
     now = datetime.now(KST)
     since = (now - timedelta(days=DAYS)).strftime("%Y-%m-%d")
     today = now.strftime("%Y-%m-%d")
+    got = []
     for name, fn in SOURCES:
         try:
             y3, y10 = fn(since)
             days = sorted(d for d in set(y3) & set(y10) if since <= d <= today)
+            print(f"{name}: {len(days)}일, 마지막 {days[-1] if days else '-'}")
             if len(days) >= 20:
-                break
-            print(f"{name}: 데이터 부족 ({len(days)}일)", file=sys.stderr)
+                got.append((days[-1], name, y3, y10, days))
         except Exception as e:  # noqa: BLE001
             print(f"{name} 실패: {e}", file=sys.stderr)
-    else:
+    if not got:
         raise SystemExit("금리 데이터를 가져오지 못함")
+    # 최근 날짜가 가장 늦은 출처, 같으면 SOURCES 순서(ECOS 우선)
+    _, name, y3, y10, days = max(got, key=lambda g: (g[0], -[n for n, _ in SOURCES].index(g[1])))
     rows = [[d, round(y3[d], 3), round(y10[d], 3)] for d in days]
     block = json.dumps({"updated": now.strftime("%Y-%m-%d %H:%M KST"), "source": name, "rows": rows},
                        ensure_ascii=False, separators=(",", ":"))
