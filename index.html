@@ -215,7 +215,8 @@ td .tag{font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-
     { "name": "반도체 다운사이클", "story": "메모리 가격 반락으로 반도체 특수가 끝나고 수출·설비투자가 줄어 성장 기대가 낮아진다.", "f": { "semi": -30, "ai": -5, "debt": -5, "disinf": -10, "frgn": -5, "labor": -10, "bok": -15, "pos": -5 } },
     { "name": "침체 + 대규모 추경", "story": "경기는 침체로 가지만 정부가 대규모 추경으로 대응해 국고채 공급이 크게 늘어난다.", "f": { "labor": -25, "bok": -15, "disinf": -5, "fisc": 15, "supply": 30, "vol": 5 } },
     { "name": "전쟁·확장재정 인플레", "story": "분쟁 확산으로 유가·환율이 오르고 확장재정이 겹쳐 기대인플레이션과 발행 부담이 커진다.", "f": { "war": 25, "fisc": 15, "fx": 10, "supply": 20, "vol": 10, "bok": 10 } },
-    { "name": "AI 생산성 확인", "story": "AI 생산성 개선이 지표로 확인되어 잠재성장과 중립금리 기대가 올라간다.", "f": { "ai": 20, "fisc": 5, "supply": 15, "frgn": 5, "labor": 5, "bok": 5 } }
+    { "name": "AI 생산성 확인", "story": "AI 생산성 개선이 지표로 확인되어 잠재성장과 중립금리 기대가 올라간다.", "f": { "ai": 20, "fisc": 5, "supply": 15, "frgn": 5, "labor": 5, "bok": 5 } },
+    { "name": "트레이더봉", "story": "AI 발전으로 장기 고용침체와 양극화가 심해져 경제가 약해지고, 반도체 성장률도 둔화된다. 위험자산 선호심리가 급격히 약해진다. 스팁 재료(고용·경기·한은 인하)와 플랫 재료(장기성장 하향·안전자산 장기물 수요)가 함께 있다.", "f": { "labor": -20, "bok": -10, "semi": -15, "ai": -15, "disinf": -5, "frgn": -10, "ins": -5, "pos": -5 } }
   ]
 }
 </script>
@@ -340,6 +341,10 @@ function strat(R,shp){
     t+=why[best.id];
     if(help.length)t+=`10년 금리를 끌어내리는 주 요인: ${help.map(x=>`${esc(x.n)}(${bp(x.v)})`).join(', ')}. `;
     if(risk.length)t+=`10년 롱의 역풍: ${risk.map(x=>`${esc(x.n)}(${bp(x.v)})`).join(', ')}.`;
+    /* 커브 재료: 요인별 스프레드 기여 = 10년 영향 − 3년 영향 */
+    const cv=FAC.map(x=>({n:x.name,c:(S.f[x.id]||0)*(1-x.k3)})).filter(x=>Math.abs(x.c)>=1);
+    const stp=cv.filter(x=>x.c>0).sort((a,b)=>b.c-a.c),flt=cv.filter(x=>x.c<0).sort((a,b)=>a.c-b.c),sm=a=>a.reduce((s,x)=>s+x.c,0);
+    if(stp.length||flt.length)t+=`<br><b>스팁 재료</b> ${bp(sm(stp))}: ${stp.map(x=>`${esc(x.n)} ${bp(x.c)}`).join(', ')||'없음'}<br><b>플랫 재료</b> ${bp(sm(flt))}: ${flt.map(x=>`${esc(x.n)} ${bp(x.c)}`).join(', ')||'없음'}`;
   }
   $('read').innerHTML=t;
 }
