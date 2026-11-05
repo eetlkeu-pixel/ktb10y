@@ -228,13 +228,14 @@ let MK={rows:[]};try{MK=JSON.parse(document.getElementById('market').textContent
 const MR=(MK.rows||[]).filter(r=>r&&isFinite(r[1])&&isFinite(r[2]));
 const LAST=MR.length?MR[MR.length-1]:null;
 if(LAST){C.base.y3=LAST[1];C.base.y10=LAST[2];C.asof=LAST[0];}
+if(isFinite(MK.rate))C.base.rate=MK.rate;
 const KEY='ktb10y-factors-v2';
 const FAC=C.groups.flatMap(g=>g.factors.map(f=>({...f,g:g.id})));
 const zeroF=()=>Object.fromEntries(FAC.map(f=>[f.id,0]));
 const clone=o=>JSON.parse(JSON.stringify(o));
 let S={base:clone(C.base),f:zeroF(),saved:[]};
-try{const r=JSON.parse(localStorage.getItem(KEY)||'null');if(r&&r.f){const rb={...r.base};delete rb.y10;delete rb.y3;S.base={...S.base,...rb};S.f={...S.f,...r.f};S.saved=Array.isArray(r.saved)?r.saved:[];}}catch(e){}
-const store=()=>{try{const o=clone(S);delete o.base.y10;delete o.base.y3;localStorage.setItem(KEY,JSON.stringify(o));}catch(e){}};
+try{const r=JSON.parse(localStorage.getItem(KEY)||'null');if(r&&r.f){const rb={...r.base};delete rb.y10;delete rb.y3;delete rb.rate;S.base={...S.base,...rb};S.f={...S.f,...r.f};S.saved=Array.isArray(r.saved)?r.saved:[];}}catch(e){}
+const store=()=>{try{const o=clone(S);delete o.base.y10;delete o.base.y3;delete o.base.rate;localStorage.setItem(KEY,JSON.stringify(o));}catch(e){}};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pct=x=>isFinite(x)?x.toFixed(2)+'%':'–';
@@ -283,7 +284,7 @@ function buildGroups(){
   $('groups').querySelectorAll('input[type=number]').forEach(el=>el.addEventListener('input',()=>{const v=parseFloat(el.value);if(!isFinite(v))return;
     const x=FAC.find(q=>q.id===el.dataset.n);S.f[x.id]=Math.max(x.min,Math.min(x.max,Math.round(v)));clearPreset();update(el);}));
 }
-const BASE=[['y10','현재 10년 % (자동)',0.01],['y3','현재 3년 % (자동)',0.01],['rate','기준금리(조달) %',0.25],['pi','기준 π̄ %',0.05],['rs','기준 r̄* %',0.05],['tp','기준 TP %',0.05],['g','반영 잠재성장 g %',0.1],['beta','β (g→r̄*)',0.05],['c10','10년 표면금리 %',0.125],['c3','3년 표면금리 %',0.125],['amt','10년 보유액 억원',10]];
+const BASE=[['y10','현재 10년 % (자동)',0.01],['y3','현재 3년 % (자동)',0.01],['rate','기준금리(조달) % (자동)',0.25],['pi','기준 π̄ %',0.05],['rs','기준 r̄* %',0.05],['tp','기준 TP %',0.05],['g','반영 잠재성장 g %',0.1],['beta','β (g→r̄*)',0.05],['c10','10년 표면금리 %',0.125],['c3','3년 표면금리 %',0.125],['amt','10년 보유액 억원',10]];
 function buildBase(){
   $('baseIns').innerHTML=BASE.map(([k,l,s])=>`<label>${l}<input type="number" step="${s}" data-b="${k}"></label>`).join('');
   document.querySelectorAll('input[data-b]').forEach(el=>{el.value=S.base[el.dataset.b];
@@ -355,7 +356,7 @@ function drawMkt(R){
   const rows=MR.filter(r=>r[0]>=s0),first=rows[0];
   const ch=(i)=>bp((LAST[i]-first[i])*100);
   $('mktHead').innerHTML=`10년 <b>${LAST[2].toFixed(3)}%</b> <span class="${cls((LAST[2]-first[2])*100)}">${ch(2)}</span> · <span style="color:var(--t3)">3년 <b>${LAST[1].toFixed(3)}%</b></span> <span class="${cls((LAST[1]-first[1])*100)}">${ch(1)}</span> · 스프레드 <b>${Math.round((LAST[2]-LAST[1])*100)}bp</b> <span style="color:var(--muted)">(3개월 전 대비)</span>`;
-  $('mktSrc').textContent=`${LAST[0]} 종가 기준 · 출처 ${MK.source||'–'} · 갱신 ${MK.updated||'–'} · 매 영업일 장 마감 후 자동 갱신`;
+  $('mktSrc').textContent=`${LAST[0]} 종가 기준 · 출처 ${MK.source||'–'}${isFinite(MK.rate)?` · 기준금리 ${MK.rate.toFixed(2)}% (한국은행, ${MK.rateDate})`:''} · 갱신 ${MK.updated||'–'} · 매 영업일 장 마감 후 자동 갱신`;
   const W=Math.max(320,box.clientWidth||800),narrow=W<600,ml=44,mr=narrow?64:92,mt=10,h1=narrow?170:210,gap=22,h2=narrow?56:70,mb=22,H=mt+h1+gap+h2+mb,pw=W-ml-mr,n=rows.length;
   const fx=ml+pw+(narrow?22:34);/* 적정 표시 위치 */
   const ys=rows.flatMap(r=>[r[1],r[2]]).concat([R.f3,R.f10]),lo=Math.floor((Math.min(...ys)-0.05)*10)/10,hi=Math.ceil((Math.max(...ys)+0.05)*10)/10;
