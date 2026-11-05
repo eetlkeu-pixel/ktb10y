@@ -32,12 +32,12 @@ def naver(code, since):
     return out
 
 
-def ecos(item, since):
+def ecos(item, since, stat="817Y002"):
     key = os.environ.get("ECOS_API_KEY") or "sample"
     start, end = since.replace("-", ""), datetime.now(KST).strftime("%Y%m%d")
     out, i = {}, 1
     while True:
-        j = get(f"https://ecos.bok.or.kr/api/StatisticSearch/{key}/json/kr/{i}/{i + 9}/817Y002/D/{start}/{end}/{item}")
+        j = get(f"https://ecos.bok.or.kr/api/StatisticSearch/{key}/json/kr/{i}/{i + 9}/{stat}/D/{start}/{end}/{item}")
         s = j.get("StatisticSearch")
         if not s:
             break
@@ -75,7 +75,16 @@ def main():
     # 최근 날짜가 가장 늦은 출처, 같으면 SOURCES 순서(ECOS 우선)
     _, name, y3, y10, days = max(got, key=lambda g: (g[0], -[n for n, _ in SOURCES].index(g[1])))
     rows = [[d, round(y3[d], 3), round(y10[d], 3)] for d in days]
-    block = json.dumps({"updated": now.strftime("%Y-%m-%d %H:%M KST"), "source": name, "rows": rows},
+    out = {"updated": now.strftime("%Y-%m-%d %H:%M KST"), "source": name, "rows": rows}
+    try:  # 한국은행 기준금리 (722Y001, 일별)
+        br = ecos("0101000", (now - timedelta(days=60)).strftime("%Y-%m-%d"), "722Y001")
+        if br:
+            d = max(br)
+            out["rate"], out["rateDate"] = br[d], d
+            print(f"기준금리 {br[d]}% ({d})")
+    except Exception as e:  # noqa: BLE001
+        print(f"기준금리 실패: {e}", file=sys.stderr)
+    block = json.dumps(out,
                        ensure_ascii=False, separators=(",", ":"))
     html = open(PATH, encoding="utf-8").read()
     new, n = re.subn(r'(<script type="application/json" id="market">)(.*?)(</script>)',
